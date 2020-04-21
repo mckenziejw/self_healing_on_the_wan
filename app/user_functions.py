@@ -160,10 +160,10 @@ def generate_link_traffic_threshold_payload(linkIndex,linkID,endA_ID,endZ_ID,end
     return payload
 
 def update_link_traffic_threshold(payload, linkIndex):
-    print payload
+    print(payload)
     linkIndex = str(linkIndex)
     linkThresholdURL = link_url + '/' +  linkIndex 
-    print linkThresholdURL
+    print(linkThresholdURL)
     r = requests.put(linkThresholdURL, data=payload, headers=headers, verify=False)
     return r
 
@@ -183,8 +183,8 @@ def getTimeSeqUTC(num):
 def set_overload_bit(router_to_configure):
     global user
     global password
-    print "making confugration changes on " + router_to_configure
-    print "#####################################"
+    print("making confugration changes on " + router_to_configure)
+    print("#####################################")
     dev = Device(host=router_to_configure, user=user, password=password).open()
     with Config(dev) as cu:
         cu.load('set protocols isis overload', format='set')
@@ -235,12 +235,12 @@ def print_simulation_failure_content(report):
     lines = report.content.split('\n')
     for line in lines:
         if '#' in line:
-            print line
+            print(line)
         elif '*' in line:
-            print line
+            print(line)
         elif 'S' in line:
             line = line.split(',')
-            print line[0] + ',' + line[1] + ',' + line[2] + ',' + line[3] + ',' + line[4] + ',' + line[5] + ','  + line[6]
+            print(line[0] + ',' + line[1] + ',' + line[2] + ',' + line[3] + ',' + line[4] + ',' + line[5] + ','  + line[6])
 
 
   
