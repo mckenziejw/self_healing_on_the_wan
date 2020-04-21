@@ -6,9 +6,6 @@ import datetime
 import time
 import requests
 
-
-maintenance_url = url + 'maintenances'
-run_simulation_url = url + 'rpc/simulation'
 headers_token = {'Content-Type': 'application/json'}
 ## Set default values for user, password and NS host
 user = 'jcluser'
@@ -26,11 +23,12 @@ if(os.environ.get('NS_HOST') is not None):
 
 url = 'http://' + ns_host + ':8091/Northstar/API/v2/tenant/1/topology/1/'
 node_url_test = url + 'nodes'
-
+maintenance_url = url + 'maintenances'
+run_simulation_url = url + 'rpc/simulation'
 node_url = url + 'nodes'
 link_url = url + 'links'
 lsp_url = url + 'te-lsps'
-token_url = 'https://' + ns_hosts + ':8443/oauth2/token'
+token_url = 'https://' + ns_host + ':8443/oauth2/token'
 def get_token():
     r = requests.post(token_url, auth=(user, password), data='{"grant_type":"password","username":"' + user + '","password":"' + password + '"}', headers=headers_token, verify=False)
     return r.json()['access_token']
