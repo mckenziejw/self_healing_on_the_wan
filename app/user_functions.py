@@ -6,21 +6,33 @@ import datetime
 import time
 import requests
 
-url = 'http://:8091/Northstar/API/v2/tenant/1/topology/1/'
+
+maintenance_url = url + 'maintenances'
+run_simulation_url = url + 'rpc/simulation'
+headers_token = {'Content-Type': 'application/json'}
+## Set default values for user, password and NS host
+user = 'jcluser'
+password = 'jcluser123'
+ns_host = '10.123.16.0'
+
+# Check for environment variable settings (used with Docker)
+
+if(os.environ.get('NS_USER') is not None):
+    user = os.environ.get('NS_USER')
+if(os.environ.get('NS_PASSWD') is not None):
+    password = os.environ.get('NS_PASSWD')
+if(os.environ.get('NS_HOST') is not None):
+    ns_host = os.environ.get('NS_HOST')
+
+url = 'http://' + ns_host + ':8091/Northstar/API/v2/tenant/1/topology/1/'
 node_url_test = url + 'nodes'
 
 node_url = url + 'nodes'
 link_url = url + 'links'
 lsp_url = url + 'te-lsps'
-token_url = 'https://:8443/oauth2/token'
-maintenance_url = url + 'maintenances'
-run_simulation_url = url + 'rpc/simulation'
-hearders_token = {'Content-Type': 'application/json'}
-user = '******'
-password = '******'
-
+token_url = 'https://' + ns_hosts + ':8443/oauth2/token'
 def get_token():
-    r = requests.post(token_url, auth=('******', '*******'), data='{"grant_type":"password","username":"******","password":"******"}', headers=hearders_token, verify=False)
+    r = requests.post(token_url, auth=(user, password), data='{"grant_type":"password","username":"' + user + '","password":"' + password + '"}', headers=headers_token, verify=False)
     return r.json()['access_token']
 
 token = get_token()
