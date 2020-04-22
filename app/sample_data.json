@@ -1,0 +1,14 @@
+{
+    "device-id": "vmx-2", 
+    "group": "all-mx", 
+    "group-type": "device", 
+    "keys": 
+    {"_instance_id": "['aaa']", 
+        "_playbook_name": "interface-kpis-playbook", 
+        "interface-name": "lo0", 
+        "sub-interface-index": "16384"}, 
+    "message": "lo0.16384 input traffic:0 is normal", 
+    "rule": "check-ifl-in-traffic", 
+    "severity": "normal", 
+    "topic": "interface.statistics", 
+    "trigger": "in-traffic"}
