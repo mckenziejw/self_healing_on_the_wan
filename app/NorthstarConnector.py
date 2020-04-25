@@ -5,10 +5,11 @@ from jinja2 import Environment, FileSystemLoader
 import datetime
 import time
 import requests
+import pickle
 
 class NorthstarConnector():
 
-    def __init__(self, user, password, hostname, template_dir, api_port = 8091, auth_port = 8443, api_version = "v2", tenant_id = 1, topology_id = 1):
+    def __init__(self, user, password, hostname, template_dir, api_port = 8443, auth_port = 8443, api_version = "v2", tenant_id = 1, topology_id = 1):
         self.user = user
         self.password = password
         self.hostname = hostname
@@ -33,6 +34,8 @@ class NorthstarConnector():
         self.template_dir = template_dir
         self.maintenance_template = 'maintenance.j2'
         self.current_maintenance = None
+        print("initialized")
+    
 
     def get_token(self):
         data = requests.post(self.token_url, auth=('admin', 'password'), data='{"grant_type":"password","username":"admin","password":"lab123"}', headers=self.token_headers, verify=False)
@@ -41,18 +44,23 @@ class NorthstarConnector():
         "username": "admin",
         "password": "lab123"
         }
-        pprint(payload)
-        pprint(self.token_url)
+        #pprint(payload)
+        #pprint(self.token_url)
         #data = requests.post(self.token_url, auth=(self.user, self.password), data=payload, headers=self.token_headers, verify=False)
-        pprint(data.json())
+        #pprint(data.json())
         if(data.json()['access_token']):
             return data.json()['access_token']
         else:
             return False
 
     def refresh_state(self):
+        print("refreshing state")
+        #pprint(self.__dict__)
         self.nodes = requests.get(self.node_url, headers=self.api_header, verify=False).json()
+        #print(data)
         self.links = requests.get(self.link_url, headers=self.api_header, verify=False).json()
+        #print(self.nodes)
+        #print(self.links)
         return True
 
     def get_node_index_by_hostname(self, hostname, refresh_state = True):
@@ -70,6 +78,7 @@ class NorthstarConnector():
         for link in self.links:
             if (link['endA']['ipv4Address']['address'] == ip) or (link['endZ']['ipv4Address']['address'] == ip):
                 i = link['linkIndex']
+                print("Found link! link index: " + str(i))
                 return i
         return False
     
@@ -78,6 +87,7 @@ class NorthstarConnector():
             self.refresh_state()
         for link in self.links:
            if ((link['endA']['node']['id'] == node_id) and (link['endA']['interfaceName'] == int_name)) or ((link['endZ']['node']['id'] == node_id) and (link['endZ']['interfaceName'] == int_name)):
+               print(link)
                return link
         return False
 
@@ -90,27 +100,32 @@ class NorthstarConnector():
         return False
 
     def create_maintenance(self, object_id, purpose, maintenance_type):
-        current_time = datetime.datetime.utcnow().stroftime("%Y%m%d%H%M")
+        current_time = datetime.datetime.utcnow().strftime("%Y%m%d%H%M")
         if purpose == 'for_simulation':
             name = 'created_for_simulation'
             start = 3600
             end = 6000
         else:
+            start = 1
+            end = 6000 
             name = 'Healthbot-' + maintenance_type + '-health-alert-' + current_time
-        jinja_env = Environment(loader=FileSystemLoader(self.template_dir), trim_blocks=True)
-        payload = jinja_env.get_template(self.maintenance_template).render(
+            print("Creating Template")
+            jinja_env = Environment(loader=FileSystemLoader(self.template_dir), trim_blocks=True)
+            print("template loaded")
+            payload = jinja_env.get_template(self.maintenance_template).render(
             maintenance_type=maintenance_type,
             index_number = object_id,
             current_time=current_time,
             name=name,
             start_time=self.getTimeSeqUTC(start),
             end_time=self.getTimeSeqUTC(end)
-        )
-        data = requests.post(self.maintenance_url, data=payload, headers=self.api_header,verify=False)
-        if data.json()['maintenanceIndex']:
-            return data.json()['maintenanceIndex']
-        else:
-            return False
+            )
+            pprint(payload)
+            data = requests.post(self.maintenance_url, data=payload, headers=self.api_header,verify=False)
+            if data.json()['maintenanceIndex']:
+                return data.json()['maintenanceIndex']
+            else:
+                return False
     
     def getTimeSeqUTC(self, num):
         a = datetime.datetime.utcnow().strftime("%Y-%m-%d %H:%M:%S")

@@ -3,7 +3,7 @@ from flask import Flask, request
 from flask_restful import abort
 import subprocess
 import json
-import pprint
+from pprint import pprint
 import requests
 import os
 from NorthstarConnector import NorthstarConnector
@@ -34,36 +34,41 @@ app = Flask(__name__)
 
 @app.route('/', methods=['POST'])
 def app_message_post():
-
-    pprint(request.json)
+    print("START PROCESSING")
+    #print(request.json)
+    #return json.dumps(request.json)
     # print("#################  Start  #######################")
-    # if request.headers['Content-Type'] != 'application/json':
-    #    print("not Json!") 
-    #    abort(400, message="Expected Content-Type = application/json")
-    # try:
-    #     # Extract global info
-    #     data = request.json
-    #     pprint(data)
-    #     device_id = data['device-id']
-    #     group = data['group']
-    #     rule = data['rule']
-    #     severity = data['severity']
-    #     trigger = data['trigger']
-
-    #     if rule == "probe_delay":
-    #         print("received delay alert")
-    #         source_address = data['keys']['source-address']
-    #         if "exceeds delay threshold" in message:
-    #             print(("HIGH DELAY DETECTED for  " + device_id + " " + source_address ))
-    #             print("HIGH DELAY DETECTED PUT LINK UNDER MAINTENANCE::")
-    #             #create maintenance for simulation purpose
-    #             int_index = ns.get_link_info_from_ip(source_address)
-    #             ns.current_maintenance = ns.create_maintenance(int_index, 'for_maint', 'link') 
-    #         elif "is normal" in message:
-    #             print("DELAY back to normal. ")
-    #             ns.delete_maintenance()
-    #     print("###############################")
-    #     return json.dumps({'result': 'OK'})
+    if request.headers['Content-Type'] != 'application/json':
+        print("not Json!") 
+        abort(400, message="Expected Content-Type = application/json")
+    try:
+    # Extract global info
+        data = request.json
+        pprint(data)
+        device_id = data['device-id']
+        group = data['group']
+        rule = data['rule']
+        severity = data['severity']
+        trigger = data['trigger']
+        print("Source address is: " + data['keys']['source-address'])
+        int_index = ns.get_link_index_by_ip(data['keys']['source-address'])
+        print(int_index)
+        if rule == "probe_delay":
+            print("received delay alert")
+            source_address = data['keys']['source-address']
+            if trigger == 'probe_exceed' and severity == 'major':
+                print(("HIGH DELAY DETECTED for  " + device_id + " " + source_address ))
+                print("HIGH DELAY DETECTED PUT LINK UNDER MAINTENANCE::")
+                #create maintenance for simulation purpose
+                int_index = ns.get_link_index_by_ip(source_address)
+                print("Interface index is " + str(int_index))
+                ns.current_maintenance = ns.create_maintenance(int_index, 'for_maint', 'link') 
+            elif severity == 'normal':
+                print("DELAY back to normal. ")
+                resp = ns.delete_maintenance()
+                pprint(resp.json())
+        print("###############################")
+        return json.dumps({'result': 'OK'})
 
     #     # if playbook_name == "cpu_openconfig":
     #     #     print("received cpu high alert")
@@ -124,9 +129,9 @@ def app_message_post():
     #     #         print("DELAY back to normal. ")
     #     # print("###############################")
     #     # return json.dumps({'result': 'OK'})
-    # except Exception as e:
-    #     abort(400, message="Exception processing request: {0}".format(e))
-    #     print('...')
+    except Exception as e:
+        pprint(e)
+        abort(400, message="Exception processing request: {0}".format(e))
 
 
 if __name__ == '__main__':
