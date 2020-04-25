@@ -9,6 +9,26 @@ import os
 import NorthstarConnector
 requests.packages.urllib3.disable_warnings() 
 
+headers_token = {'Content-Type': 'application/json'}
+## Set default values for user, password and NS host
+user = 'jcluser'
+password = 'jcluser123'
+ns_host = '10.123.16.0'
+
+# Check for environment variable settings (used with Docker)
+
+if(os.environ.get('NS_USER') is not None):
+    user = os.environ.get('NS_USER')
+if(os.environ.get('NS_PASSWD') is not None):
+    password = os.environ.get('NS_PASSWD')
+if(os.environ.get('NS_HOST') is not None):
+    ns_host = os.environ.get('NS_HOST')
+
+template_dir = os.path.dirname(os.path.abspath('__file__'))
+# Initialize NorthstarConnector
+
+ns = NorthstarConnector(user, password, ns_host, template_dir)
+
 # Initialize the Flask application
 app = Flask(__name__)
 
@@ -26,6 +46,21 @@ def app_message_post():
         rule = data['rule']
         severity = data['severity']
         trigger = data['trigger']
+
+        if rule == "probe_delay":
+            print("received delay alert")
+            source_address = data['keys']['source-address']
+            if "exceeds delay threshold" in message:
+                print(("HIGH DELAY DETECTED for  " + device_id + " " + source_address ))
+                print("HIGH DELAY DETECTED PUT LINK UNDER MAINTENANCE::")
+                #create maintenance for simulation purpose
+                int_index = ns.get_link_info_from_ip(source_address)
+                ns.current_maintenance = = ns.create_maintenance(int_index, 'for_maint', 'link') 
+            elif "is normal" in message:
+                print("DELAY back to normal. ")
+                ns.delete_maintenance()
+        print("###############################")
+        return json.dumps({'result': 'OK'})
 
         # if playbook_name == "cpu_openconfig":
         #     print("received cpu high alert")

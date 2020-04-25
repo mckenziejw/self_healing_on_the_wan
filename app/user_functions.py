@@ -110,7 +110,7 @@ def delete_maintenance(maint_index):
     r = requests.delete(delete_maint_url, headers=headers, verify=False)
     return r
 
-def generate_maitenance_json(index_number, use, maintenance_type):
+def generate_maintenance_json(index_number, use, maintenance_type):
     #start = 1 for now
     # end = 6000 
     maintenance_type = maintenance_type
@@ -138,7 +138,7 @@ def generate_maitenance_json(index_number, use, maintenance_type):
     return (payload)
 
 '''
-def generate_link_maitenance_json():
+def generate_link_maintenance_json():
     index_number = get_link_info("L10.135.5.1_10.135.5.2")
     THIS_DIR = os.path.dirname(os.path.abspath(__file__))
 
