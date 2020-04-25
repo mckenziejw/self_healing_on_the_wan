@@ -123,7 +123,7 @@ class NorthstarConnector():
             pprint(payload)
             data = requests.post(self.maintenance_url, data=payload, headers=self.api_header,verify=False)
             if data.json()['maintenanceIndex']:
-                return data
+                return data.json()
             else:
                 return False
     
