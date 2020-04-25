@@ -17,15 +17,15 @@ class NorthstarConnector():
         self.api_version = api_version
         self.tenant_id = tenant_id
         self.topology_id = topology_id
-        self.base_url = 'http://' + hostname + ':' + str(self.api_port) + '/Northstar/API/' + self.api_version + '/tenant/' + self.tenant_id + '/topology/' + self.topology_id + '/'
+        self.base_url = 'https://' + hostname + ':' + str(self.api_port) + '/Northstar/API/' + self.api_version + '/tenant/' + str(self.tenant_id) + '/topology/' + str(self.topology_id) + '/'
         self.node_url = self.base_url + 'nodes'
         self.link_url = self.base_url + 'links'
         self.lsp_url = self.base_url + 'te-lsps'
         self.maintenance_url = self.base_url + 'maintenances'
         self.simulation_url = self.base_url + 'rpc/simulation'
         self.token_headers = {'Content-Type': 'application/json'}
-        self.token_url = 'https://' + hostname + ':' + self.auth_port + '/oauth2/token'
-        self.token = get_token()
+        self.token_url = 'https://' + hostname + ':' + str(self.auth_port) + '/oauth2/token'
+        self.token = self.get_token()
         self.api_header = {'Authorization': str('Bearer ' + self.token), 'Content-Type': 'application/json'}
         self.nodes = []
         self.links = []
@@ -35,7 +35,16 @@ class NorthstarConnector():
         self.current_maintenance = None
 
     def get_token(self):
-        data = requests.post(self.token_url, auth=(self.user, self.password), data='{"grant_type":"password","username":"' + self.user + '","password":"' + self.password + '"}', headers=token_headers, verify=False))
+        data = requests.post(self.token_url, auth=('admin', 'password'), data='{"grant_type":"password","username":"admin","password":"lab123"}', headers=self.token_headers, verify=False)
+        payload = {
+        "grant_type": "password",
+        "username": "admin",
+        "password": "lab123"
+        }
+        pprint(payload)
+        pprint(self.token_url)
+        #data = requests.post(self.token_url, auth=(self.user, self.password), data=payload, headers=self.token_headers, verify=False)
+        pprint(data.json())
         if(data.json()['access_token']):
             return data.json()['access_token']
         else:
@@ -94,13 +103,13 @@ class NorthstarConnector():
             index_number = object_id,
             current_time=current_time,
             name=name,
-            start_time=self.getTimeSeqUTC(start)
+            start_time=self.getTimeSeqUTC(start),
             end_time=self.getTimeSeqUTC(end)
         )
         data = requests.post(self.maintenance_url, data=payload, headers=self.api_header,verify=False)
         if data.json()['maintenanceIndex']:
             return data.json()['maintenanceIndex']
-        else
+        else:
             return False
     
     def getTimeSeqUTC(self, num):
