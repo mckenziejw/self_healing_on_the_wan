@@ -65,7 +65,7 @@ def app_message_post():
                 ns.current_maintenance = ns.create_maintenance(int_index, 'for_maint', 'link') 
             elif severity == 'normal':
                 print("DELAY back to normal. ")
-                resp = ns.delete_maintenance()
+                resp = ns.complete_maintenance()
                 pprint(resp.json())
         print("###############################")
         return json.dumps({'result': 'OK'})

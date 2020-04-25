@@ -123,7 +123,7 @@ class NorthstarConnector():
             pprint(payload)
             data = requests.post(self.maintenance_url, data=payload, headers=self.api_header,verify=False)
             if data.json()['maintenanceIndex']:
-                return data.json()['maintenanceIndex']
+                return data
             else:
                 return False
     
@@ -137,6 +137,14 @@ class NorthstarConnector():
         finalTime = ''.join([juniorTime, endstr])
         return finalTime + 'Z'
 # Note: This currently only handles one maintenance at a time
+
+    def complete_maintenance(self):
+        update_url = self.maintenance_url + '/' + str(self.current_maintenance['properties']['maintenance_index'])
+        pprint(self.current_maintenance)
+        self.current_maintenance['properties']['status']['type'] = 'completed'
+        data = requests.put(update_url, headers=self.api_header, verify=False)
+        return data
+
     def delete_maintenance(self):
         del_url = self.maintenance_url + '/' + str(self.current_maintenance)
         data = requests.delete(del_url, headers=self.api_header, verify=False)
