@@ -120,8 +120,8 @@ class NorthstarConnector():
             name = 'created_for_simulation'
         else:
             start = 1
-                end = 6000 
-                name = 'Healthbot-' + maintenance_type + '-health-alert-' + current_time
+            end = 6000 
+            name = 'Healthbot-' + maintenance_type + '-health-alert-' + current_time
         if self.get_maintenance_id(object_type=maintenance_type, object_id=object_id) is None:
             
             jinja_env = Environment(loader=FileSystemLoader(self.template_dir), trim_blocks=True)
@@ -174,22 +174,22 @@ class NorthstarConnector():
         else:
             return None
 
-    def run_simulation(simulation_name):
+    def run_simulation(self, simulation_name):
         simulation_name = simulation_name
         simulation_type = "link"
         simulation_payload = '{"topoObjectType":"maintenance","topologyIndex":1,"elements":[{"type":"maintenance","maintenanceName":"' + simulation_name + '"},"' + simulation_type + '"]}'
         r = requests.post(run_simulation_url, data=simulation_payload, headers=headers, verify=False)
         return r
     
-    def check_if_simulation_pass():
+    def check_if_simulation_pass(self):
         check_passed = 'true'
         simulation_name = 'created_for_simulation'
         simulation_type = "link"
         simulation_payload = '{"topoObjectType":"maintenance","topologyIndex":1,"elements":[{"type":"maintenance","maintenanceName":"' + simulation_name + '"},"' + simulation_type + '"]}'
-        r = requests.post(self.simulation_url, data=simulation_payload, headers=headers, verify=False)
+        r = requests.post(self.simulation_url, data=simulation_payload, headers=self.api_header, verify=False)
         simulationID=r.json()['simulationId'] 
         simulation_report_url = self.base_url + 'rpc/simulation/' + simulationID + '/Report/L2_PeakSimRoute.r0'
-        report = requests.get(simulation_report_url, headers=headers, verify=False)
+        report = requests.get(simulation_report_url, headers=self.api_header, verify=False)
         if "NotRouted" in report.content:
             check_passed = 'false'
         return check_passed
