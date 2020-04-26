@@ -56,13 +56,18 @@ def app_message_post():
             source_address = data['keys']['source-address']
             if trigger == 'probe_exceed' and severity == 'major':
                 print(("HIGH DELAY DETECTED for  " + device_id + " " + source_address ))
-                print("HIGH DELAY DETECTED PUT LINK UNDER MAINTENANCE::")
+                print("Begin exhaustive failure simulation")
                 #create maintenance for simulation purpose
-                new_maint = ns.create_maintenance(int_index, 'for_maint', 'link') 
-                if new_maint is not None:
-                    ns.maintenances[new_maint['maintenanceIndex']] = new_maint
+                new_maint = ns.create_maintenance(int_index, 'for_simulation', 'link') 
+                if ns.check_if_simulation_pass():
+                    print("Simulation passed")
+                    print("HIGH DELAY DETECTED PUT LINK UNDER MAINTENANCE::")
+                    ns.delete_maintenance(new_maint['maintenanceIndex'])
+                    new_maint = ns.create_maintenance(int_index, 'for_maint', 'link') 
+                # if new_maint is not None:
+                #     ns.maintenances[new_maint['maintenanceIndex']] = new_maint
                     
-                    pprint(new_maint)
+                #     pprint(new_maint)
             elif severity == 'normal':
                 print("DELAY back to normal. ")
                 int_index = ns.get_link_index_by_ip(source_address)

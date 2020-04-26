@@ -114,10 +114,16 @@ class NorthstarConnector():
 
     def create_maintenance(self, object_id, purpose, maintenance_type):
         current_time = datetime.datetime.utcnow().strftime("%Y%m%d%H%M")
-        if self.get_maintenance_id(object_type=maintenance_type, object_id=object_id) is None:
+        if purpose == 'for_simulation':
+            start = 3600
+            end = 6000
+            name = 'created_for_simulation'
+        else:
             start = 1
-            end = 6000 
-            name = 'Healthbot-' + maintenance_type + '-health-alert-' + current_time
+                end = 6000 
+                name = 'Healthbot-' + maintenance_type + '-health-alert-' + current_time
+        if self.get_maintenance_id(object_type=maintenance_type, object_id=object_id) is None:
+            
             jinja_env = Environment(loader=FileSystemLoader(self.template_dir), trim_blocks=True)
             payload = jinja_env.get_template(self.maintenance_template).render(
             maintenance_type=maintenance_type,
@@ -167,5 +173,25 @@ class NorthstarConnector():
             return data
         else:
             return None
+
+    def run_simulation(simulation_name):
+        simulation_name = simulation_name
+        simulation_type = "link"
+        simulation_payload = '{"topoObjectType":"maintenance","topologyIndex":1,"elements":[{"type":"maintenance","maintenanceName":"' + simulation_name + '"},"' + simulation_type + '"]}'
+        r = requests.post(run_simulation_url, data=simulation_payload, headers=headers, verify=False)
+        return r
+    
+    def check_if_simulation_pass():
+        check_passed = 'true'
+        simulation_name = 'created_for_simulation'
+        simulation_type = "link"
+        simulation_payload = '{"topoObjectType":"maintenance","topologyIndex":1,"elements":[{"type":"maintenance","maintenanceName":"' + simulation_name + '"},"' + simulation_type + '"]}'
+        r = requests.post(self.simulation_url, data=simulation_payload, headers=headers, verify=False)
+        simulationID=r.json()['simulationId'] 
+        simulation_report_url = self.base_url + 'rpc/simulation/' + simulationID + '/Report/L2_PeakSimRoute.r0'
+        report = requests.get(simulation_report_url, headers=headers, verify=False)
+        if "NotRouted" in report.content:
+            check_passed = 'false'
+        return check_passed
 
     
