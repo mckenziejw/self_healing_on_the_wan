@@ -61,13 +61,15 @@ def app_message_post():
                 new_maint = ns.create_maintenance(int_index, 'for_maint', 'link') 
                 if new_maint is not None:
                     ns.maintenances[new_maint['maintenanceIndex']] = new_maint
-                    pprint(ns.current_maintenance)
+                    
+                    pprint(new_maint)
             elif severity == 'normal':
                 print("DELAY back to normal. ")
                 int_index = ns.get_link_index_by_ip(source_address)
-                if ns.get_maintenance_id(object_type='link', object_id=int_index) is not None:
-                    resp = ns.complete_maintenance()
-                    pprint(resp.json())
+                maint_id = ns.get_maintenance_id(object_type='link', object_id=int_index)
+                if maint_id is not None:
+                    resp = ns.complete_maintenance(maint_id)
+                    resp_n = ns.delete_maintenance(maint_id)
         print("###############################")
         return json.dumps({'result': 'OK'})
 
