@@ -139,10 +139,11 @@ class NorthstarConnector():
 # Note: This currently only handles one maintenance at a time
 
     def complete_maintenance(self):
-        update_url = self.maintenance_url + '/' + str(self.current_maintenance['properties']['maintenance_index'])
+        update_url = self.maintenance_url + '/' + str(self.current_maintenance['maintenanceIndex'])
         pprint(self.current_maintenance)
-        self.current_maintenance['properties']['status']['type'] = 'completed'
-        data = requests.put(update_url, headers=self.api_header, verify=False)
+        self.current_maintenance['status'] = 'completed'
+        payload = json.dumps(self.current_maintenance)
+        data = requests.put(update_url, data=payload, headers=self.api_header, verify=False)
         return data
 
     def delete_maintenance(self):

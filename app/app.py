@@ -63,6 +63,7 @@ def app_message_post():
                 int_index = ns.get_link_index_by_ip(source_address)
                 print("Interface index is " + str(int_index))
                 ns.current_maintenance = ns.create_maintenance(int_index, 'for_maint', 'link') 
+                pprint(ns.current_maintenance)
             elif severity == 'normal':
                 print("DELAY back to normal. ")
                 resp = ns.complete_maintenance()
