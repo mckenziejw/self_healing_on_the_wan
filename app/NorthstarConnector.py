@@ -31,6 +31,7 @@ class NorthstarConnector():
         self.nodes = []
         self.links = []
         self.lsps = []
+        self.maintenances = {}
         self.template_dir = template_dir
         self.maintenance_template = 'maintenance.j2'
         self.current_maintenance = None
@@ -55,12 +56,9 @@ class NorthstarConnector():
 
     def refresh_state(self):
         print("refreshing state")
-        #pprint(self.__dict__)
         self.nodes = requests.get(self.node_url, headers=self.api_header, verify=False).json()
-        #print(data)
+        self.maintenances = requests.get(self.maintenance_url, headers=self.api_header, verify=False).json()
         self.links = requests.get(self.link_url, headers=self.api_header, verify=False).json()
-        #print(self.nodes)
-        #print(self.links)
         return True
 
     def get_node_index_by_hostname(self, hostname, refresh_state = True):
@@ -98,34 +96,39 @@ class NorthstarConnector():
             if node['hostName'] == hostname:
                 return node['id']
         return False
+    
+    def get_maintenance_id(self, object_type, object_id):
+        # Note: this assumes no more than one maintenance active per object
+        for m in self.maintenances:
+            for e in m['elements']:
+                if e['index'] == object_id and e['topoObjectType'] == object_type:
+                    return m['maintenanceIndex']
+        return None      
 
     def create_maintenance(self, object_id, purpose, maintenance_type):
         current_time = datetime.datetime.utcnow().strftime("%Y%m%d%H%M")
-        if purpose == 'for_simulation':
-            name = 'created_for_simulation'
-            start = 3600
-            end = 6000
-        else:
+        if self.get_maintenance_id(object_type=maintenance_type, object_id=object_id) is None:
             start = 1
             end = 6000 
             name = 'Healthbot-' + maintenance_type + '-health-alert-' + current_time
-            print("Creating Template")
             jinja_env = Environment(loader=FileSystemLoader(self.template_dir), trim_blocks=True)
-            print("template loaded")
-            payload = jinja_env.get_template(self.maintenance_template).render(
-            maintenance_type=maintenance_type,
-            index_number = object_id,
-            current_time=current_time,
-            name=name,
-            start_time=self.getTimeSeqUTC(start),
-            end_time=self.getTimeSeqUTC(end)
+                payload = jinja_env.get_template(self.maintenance_template).render(
+                maintenance_type=maintenance_type,
+                index_number = object_id,
+                current_time=current_time,
+                name=name,
+                start_time=self.getTimeSeqUTC(start),
+                end_time=self.getTimeSeqUTC(end)
             )
-            pprint(payload)
             data = requests.post(self.maintenance_url, data=payload, headers=self.api_header,verify=False)
             if data.json()['maintenanceIndex']:
+                self.maintenances[data.json()['maintenanceIndex']] = data.json()
                 return data.json()
             else:
-                return False
+                return None
+        else:
+            print("Maintenance already exists for {} with ID {}".format(maintenance_type, object_id))
+            return None
     
     def getTimeSeqUTC(self, num):
         a = datetime.datetime.utcnow().strftime("%Y-%m-%d %H:%M:%S")
@@ -136,19 +139,21 @@ class NorthstarConnector():
         endstr = "00"
         finalTime = ''.join([juniorTime, endstr])
         return finalTime + 'Z'
-# Note: This currently only handles one maintenance at a time
 
-    def complete_maintenance(self):
-        update_url = self.maintenance_url + '/' + str(self.current_maintenance['maintenanceIndex'])
-        pprint(self.current_maintenance)
-        self.current_maintenance['status'] = 'completed'
-        payload = json.dumps(self.current_maintenance)
+    def complete_maintenance(self, maintenance_id):
+        update_url = self.maintenance_url + '/' + str(maintenance_id))
+        self.maintenances[maintenance_id]['status'] = 'completed'
+        payload = json.dumps(self.maintenances[maintenance_id])
         data = requests.put(update_url, data=payload, headers=self.api_header, verify=False)
         return data
 
-    def delete_maintenance(self):
-        del_url = self.maintenance_url + '/' + str(self.current_maintenance)
+    def delete_maintenance(self, maintenance_id):
+        del_url = self.maintenance_url + '/' + str(maintenance_id)
         data = requests.delete(del_url, headers=self.api_header, verify=False)
-        return data
+        if data:
+            self.maintenances.pop(maintenance_id)
+            return data
+        else:
+            return None
 
     

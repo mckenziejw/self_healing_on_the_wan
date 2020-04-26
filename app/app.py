@@ -44,7 +44,6 @@ def app_message_post():
     try:
     # Extract global info
         data = request.json
-        pprint(data)
         device_id = data['device-id']
         group = data['group']
         rule = data['rule']
@@ -52,7 +51,6 @@ def app_message_post():
         trigger = data['trigger']
         print("Source address is: " + data['keys']['source-address'])
         int_index = ns.get_link_index_by_ip(data['keys']['source-address'])
-        print(int_index)
         if rule == "probe_delay":
             print("received delay alert")
             source_address = data['keys']['source-address']
@@ -60,14 +58,16 @@ def app_message_post():
                 print(("HIGH DELAY DETECTED for  " + device_id + " " + source_address ))
                 print("HIGH DELAY DETECTED PUT LINK UNDER MAINTENANCE::")
                 #create maintenance for simulation purpose
-                int_index = ns.get_link_index_by_ip(source_address)
-                print("Interface index is " + str(int_index))
-                ns.current_maintenance = ns.create_maintenance(int_index, 'for_maint', 'link') 
-                pprint(ns.current_maintenance)
+                new_maint = ns.create_maintenance(int_index, 'for_maint', 'link') 
+                if new_maint is not None:
+                    ns.maintenances[new_maint['maintenanceIndex']] = new_maint
+                    pprint(ns.current_maintenance)
             elif severity == 'normal':
                 print("DELAY back to normal. ")
-                resp = ns.complete_maintenance()
-                pprint(resp.json())
+                int_index = ns.get_link_index_by_ip(source_address)
+                if ns.get_maintenance_id(object_type='link', object_id=int_index) is not None:
+                    resp = ns.complete_maintenance()
+                    pprint(resp.json())
         print("###############################")
         return json.dumps({'result': 'OK'})
 
