@@ -14,6 +14,7 @@ headers_token = {'Content-Type': 'application/json'}
 user = 'admin'
 password = 'lab123'
 ns_host = '172.25.11.100'
+sms_receiver = None
 
 # Check for environment variable settings (used with Docker)
 
@@ -23,11 +24,13 @@ if(os.environ.get('NS_PASSWD') is not None):
     password = os.environ.get('NS_PASSWD')
 if(os.environ.get('NS_HOST') is not None):
     ns_host = os.environ.get('NS_HOST')
+if(os.environ.get('SMS_RECEIVER') is not None):
+    sms_receivers = [os.environ.get('SMS_RECEIVER')]
 
 template_dir = os.path.dirname(os.path.abspath('__file__'))
 # Initialize NorthstarConnector
 
-ns = NorthstarConnector(user=user, password=password, hostname=ns_host, template_dir=template_dir)
+ns = NorthstarConnector(user=user, password=password, hostname=ns_host, template_dir=template_dir, sms_receivers=sms_receivers)
 
 # Initialize the Flask application
 app = Flask(__name__)
@@ -35,9 +38,6 @@ app = Flask(__name__)
 @app.route('/', methods=['POST'])
 def app_message_post():
     print("START PROCESSING")
-    #print(request.json)
-    #return json.dumps(request.json)
-    # print("#################  Start  #######################")
     if request.headers['Content-Type'] != 'application/json':
         print("not Json!") 
         abort(400, message="Expected Content-Type = application/json")
@@ -45,6 +45,7 @@ def app_message_post():
     # Extract global info
         data = request.json
         device_id = data['device-id']
+        hostname = data['hostname']
         group = data['group']
         rule = data['rule']
         severity = data['severity']
@@ -63,11 +64,9 @@ def app_message_post():
                     print("Simulation passed")
                     print("HIGH DELAY DETECTED PUT LINK UNDER MAINTENANCE::")
                     ns.delete_maintenance(new_maint['maintenanceIndex'])
-                    new_maint = ns.create_maintenance(int_index, 'for_maint', 'link') 
-                # if new_maint is not None:
-                #     ns.maintenances[new_maint['maintenanceIndex']] = new_maint
-                    
-                #     pprint(new_maint)
+                    new_maint = ns.create_maintenance(int_index, 'for_maint', 'link')
+                    if(new_maint is not None):
+                        ns.sms_notify("A link has been put under maintenance due to high link delay. Link ID: int_index")
             elif severity == 'normal':
                 print("DELAY back to normal. ")
                 int_index = ns.get_link_index_by_ip(source_address)
@@ -75,6 +74,25 @@ def app_message_post():
                 if maint_id is not None:
                     resp = ns.complete_maintenance(maint_id)
                     resp_n = ns.delete_maintenance(maint_id)
+        if rule == "system.cpu/check-system-cpu":
+            if trigger == 're-cpu-utilization' and severity == 'major':
+                print("Recieved High CPU alert")
+                print("Begin exhaustive failure simulation")
+                device_id = ns.get_node_id_by_hostname(hostname)
+                new_maint = ns.create_maintenance(device_id, 'for_simulation', 'node')
+                if ns.check_if_simulation_pass():
+                    print("Simulation passed")
+                    print("HIGH CPU PUT NODE UNDER MAINTENANCE::")
+                    ns.delete_maintenance(new_maint['maintenanceIndex'])
+                    new_maint = ns.create_maintenance(device_id, 'for_maint', 'node')
+                    if(new_maint is not None):
+                        ns.sms_notify("A node has been put under maintenance due to high CPU utilization. Node: device_id")
+                elif severity == 'normal':
+                    print("CPU utilization back to normal. ")
+                    maint_id = ns.get_maintenance_id(object_type='node', object_id=device_id)
+                    if maint_id is not None:
+                        resp = ns.complete_maintenance(maint_id)
+                        resp_n = ns.delete_maintenance(maint_id)
         print("###############################")
         return json.dumps({'result': 'OK'})
 
@@ -147,3 +165,5 @@ if __name__ == '__main__':
         host="0.0.0.0",
         port=int("10000")
     )
+
+def 

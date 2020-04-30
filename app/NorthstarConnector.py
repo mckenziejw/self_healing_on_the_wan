@@ -6,10 +6,11 @@ import datetime
 import time
 import requests
 import pickle
-
+from twilio import twiml
+# twilio number (218) 396-2134
 class NorthstarConnector():
 
-    def __init__(self, user, password, hostname, template_dir, api_port = 8443, auth_port = 8443, api_version = "v2", tenant_id = 1, topology_id = 1):
+    def __init__(self, user, password, hostname, template_dir, api_port = 8443, auth_port = 8443, api_version = "v2", tenant_id = 1, topology_id = 1, sms_receivers = None, account_sid = 'AC1707c740349f4ef59ad13c281622e543', auth_token = '1699514a35f5d1390a1a5a9619d0a67e'):
         self.user = user
         self.password = password
         self.hostname = hostname
@@ -35,6 +36,9 @@ class NorthstarConnector():
         self.template_dir = template_dir
         self.maintenance_template = 'maintenance.j2'
         self.current_maintenance = None
+        self.sms_receivers = sms_receivers
+        self.auth_token = auth_token
+        self.account_sid = account_sid
         print("initialized")
     
 
@@ -96,7 +100,7 @@ class NorthstarConnector():
                return link
         return False
 
-    def get_node_id_by_hostname(self, hostname):
+    def get_node_id_by_hostname(self, hostname, refresh_state = True):
         if refresh_state:
             self.refresh_state()
         for node in self.nodes:
@@ -145,6 +149,17 @@ class NorthstarConnector():
         else:
             print("Maintenance already exists for {} with ID {}".format(maintenance_type, object_id))
             return None
+
+    def sms_notify(self, message):
+        client = Client(self.account_sid, self.auth_token)
+        for receiver in self.sms_receivers:
+            msg = client.messages \ 
+                .create(
+                    body=message,
+                    from='+15032073257',
+                    to=receiver
+                )
+        return True
     
     def getTimeSeqUTC(self, num):
         a = datetime.datetime.utcnow().strftime("%Y-%m-%d %H:%M:%S")
