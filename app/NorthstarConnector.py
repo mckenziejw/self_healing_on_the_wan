@@ -10,7 +10,7 @@ from twilio import twiml
 # twilio number (218) 396-2134
 class NorthstarConnector():
 
-    def __init__(self, user, password, hostname, template_dir, api_port = 8443, auth_port = 8443, api_version = "v2", tenant_id = 1, topology_id = 1, sms_receivers = None, account_sid = 'AC1707c740349f4ef59ad13c281622e543', auth_token = '1699514a35f5d1390a1a5a9619d0a67e'):
+    def __init__(self, user, password, hostname, template_dir, api_port = 8443, auth_port = 8443, api_version = "v2", tenant_id = 1, topology_id = 1, sms_receivers = None, account_sid = 'AC1707c740349f4ef59ad13c281622e543', auth_token = 'f28460c4b4180cc10182e682ce5c69e0'):
         self.user = user
         self.password = password
         self.hostname = hostname
@@ -61,7 +61,9 @@ class NorthstarConnector():
     def refresh_state(self):
         print("refreshing state")
         self.nodes = requests.get(self.node_url, headers=self.api_header, verify=False).json()
+        #pprint(self.nodes)
         self.maintenances = self.parse_maintenances()
+        #pprint(self.maintenances)
         self.links = requests.get(self.link_url, headers=self.api_header, verify=False).json()
         return True
 
@@ -72,11 +74,11 @@ class NorthstarConnector():
             out_dict[m['maintenanceIndex']] = m
         return out_dict
 
-    def get_node_index_by_hostname(self, hostname, refresh_state = True):
+    def get_node_index_by_device(self, device, refresh_state = True):
         if refresh_state:
             self.refresh_state()
         for node in self.nodes:
-            if node['hostname'] == hostname:
+            if node['nodeIndex'] == device:
                 i = node['nodeIndex']
                 return i
         return False
@@ -105,12 +107,14 @@ class NorthstarConnector():
             self.refresh_state()
         for node in self.nodes:
             if node['hostName'] == hostname:
-                return node['id']
+                return node['nodeIndex']
         return False
     
     def get_maintenance_id(self, object_type, object_id):
         # Note: this assumes no more than one maintenance active per object
         for k, m in self.maintenances.items():
+            print("Checking maintenance: ")
+            pprint(m)
             for e in m['elements']:
                 if e['index'] == object_id and e['topoObjectType'] == object_type:
                     return m['maintenanceIndex']
@@ -127,7 +131,6 @@ class NorthstarConnector():
             end = 6000 
             name = 'Healthbot-' + maintenance_type + '-health-alert-' + current_time
         if self.get_maintenance_id(object_type=maintenance_type, object_id=object_id) is None:
-            
             jinja_env = Environment(loader=FileSystemLoader(self.template_dir), trim_blocks=True)
             payload = jinja_env.get_template(self.maintenance_template).render(
             maintenance_type=maintenance_type,
@@ -137,7 +140,10 @@ class NorthstarConnector():
             start_time=self.getTimeSeqUTC(start),
             end_time=self.getTimeSeqUTC(end)
             )
+            pprint(payload)
             data = requests.post(self.maintenance_url, data=payload, headers=self.api_header,verify=False)
+            print("received something")
+            pprint(data.json())
             if data.json()['maintenanceIndex']:
                 print("updating maintenances")
                 i = data.json()['maintenanceIndex']
@@ -153,12 +159,7 @@ class NorthstarConnector():
     def sms_notify(self, message):
         client = Client(self.account_sid, self.auth_token)
         for receiver in self.sms_receivers:
-            msg = client.messages \ 
-                .create(
-                    body=message,
-                    from='+15032073257',
-                    to=receiver
-                )
+            msg = client.messages.create(body=message,from_='+15032073257',to=receiver)
         return True
     
     def getTimeSeqUTC(self, num):

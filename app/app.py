@@ -2,7 +2,9 @@
 from flask import Flask, request
 from flask_restful import abort
 import subprocess
+import traceback
 import json
+from time import sleep
 from pprint import pprint
 import requests
 import os
@@ -14,7 +16,7 @@ headers_token = {'Content-Type': 'application/json'}
 user = 'admin'
 password = 'lab123'
 ns_host = '172.25.11.100'
-sms_receiver = None
+sms_receivers = None
 
 # Check for environment variable settings (used with Docker)
 
@@ -44,16 +46,18 @@ def app_message_post():
     try:
     # Extract global info
         data = request.json
+        pprint(data)
         device_id = data['device-id']
-        hostname = data['hostname']
+        #hostname = data['hostname']
         group = data['group']
         rule = data['rule']
         severity = data['severity']
         trigger = data['trigger']
-        print("Source address is: " + data['keys']['source-address'])
-        int_index = ns.get_link_index_by_ip(data['keys']['source-address'])
+        #print("Source address is: " + data['keys']['source-address'])
+        #int_index = ns.get_link_index_by_ip(data['keys']['source-address'])
         if rule == "probe_delay":
             print("received delay alert")
+            int_index = ns.get_link_index_by_ip(data['keys']['source-address'])
             source_address = data['keys']['source-address']
             if trigger == 'probe_exceed' and severity == 'major':
                 print(("HIGH DELAY DETECTED for  " + device_id + " " + source_address ))
@@ -65,8 +69,8 @@ def app_message_post():
                     print("HIGH DELAY DETECTED PUT LINK UNDER MAINTENANCE::")
                     ns.delete_maintenance(new_maint['maintenanceIndex'])
                     new_maint = ns.create_maintenance(int_index, 'for_maint', 'link')
-                    if(new_maint is not None):
-                        ns.sms_notify("A link has been put under maintenance due to high link delay. Link ID: int_index")
+#                    if(new_maint is not None):
+#                        ns.sms_notify("A link has been put under maintenance due to high link delay. Link ID: int_index")
             elif severity == 'normal':
                 print("DELAY back to normal. ")
                 int_index = ns.get_link_index_by_ip(source_address)
@@ -74,25 +78,35 @@ def app_message_post():
                 if maint_id is not None:
                     resp = ns.complete_maintenance(maint_id)
                     resp_n = ns.delete_maintenance(maint_id)
-        if rule == "system.cpu/check-system-cpu":
+        if rule == "check-system-cpu":
             if trigger == 're-cpu-utilization' and severity == 'major':
+                #hostname = data['hostname']
                 print("Recieved High CPU alert")
                 print("Begin exhaustive failure simulation")
+                print(data)
+                hostname = data['device-id']
+                print("host is: " + hostname)
                 device_id = ns.get_node_id_by_hostname(hostname)
+                #device_id = data['nodeIndex']
                 new_maint = ns.create_maintenance(device_id, 'for_simulation', 'node')
+                print("New Maintenance for sim")
+                pprint(new_maint)
                 if ns.check_if_simulation_pass():
+                    sleep(10)
                     print("Simulation passed")
                     print("HIGH CPU PUT NODE UNDER MAINTENANCE::")
                     ns.delete_maintenance(new_maint['maintenanceIndex'])
                     new_maint = ns.create_maintenance(device_id, 'for_maint', 'node')
-                    if(new_maint is not None):
-                        ns.sms_notify("A node has been put under maintenance due to high CPU utilization. Node: device_id")
-                elif severity == 'normal':
-                    print("CPU utilization back to normal. ")
-                    maint_id = ns.get_maintenance_id(object_type='node', object_id=device_id)
-                    if maint_id is not None:
-                        resp = ns.complete_maintenance(maint_id)
-                        resp_n = ns.delete_maintenance(maint_id)
+#                    if(new_maint is not None):
+#                        ns.sms_notify("A node has been put under maintenance due to high CPU utilization. Node: device_id")
+            elif severity == 'normal':
+                print("CPU utilization back to normal. ")
+                hostname = data['device-id']
+                device_id = ns.get_node_id_by_hostname(hostname)
+                maint_id = ns.get_maintenance_id(object_type='node', object_id=device_id)
+                if maint_id is not None:
+                    resp = ns.complete_maintenance(maint_id)
+                    resp_n = ns.delete_maintenance(maint_id)
         print("###############################")
         return json.dumps({'result': 'OK'})
 
@@ -158,12 +172,10 @@ def app_message_post():
     except Exception as e:
         pprint(e)
         abort(400, message="Exception processing request: {0}".format(e))
-
+        traceback.print_exc()
 
 if __name__ == '__main__':
     app.run(
         host="0.0.0.0",
         port=int("10000")
     )
-
-def 
