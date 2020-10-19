@@ -61,7 +61,7 @@ class NorthstarConnector():
     def refresh_state(self):
         print("refreshing state")
         self.nodes = requests.get(self.node_url, headers=self.api_header, verify=False).json()
-        #pprint(self.nodes)
+        pprint(self.nodes)
         self.maintenances = self.parse_maintenances()
         #pprint(self.maintenances)
         self.links = requests.get(self.link_url, headers=self.api_header, verify=False).json()
